@@ -1,0 +1,26 @@
+redis有三种部署模式
+1、准备需要部署的机器和redis软件包，去redis官网下载软件包，url：https://redis.io（注意linux软件库中有redis，可以直接安装，官网不支持windows版本，如果需要可以在github上下载，url：https://github.com/MicrosoftArchive/redis/releases）
+2、部署模式
+	2.1、单节点模式
+		启动命令：redis-server直接启动默认配置，redis-server redis.conf使用指定配置启动redis。
+		特殊参数：
+			bind：可以访问本服务的主机（修改为可以使用本服务的主机ip）
+			port：使用端口
+			appendonly：持久化方式，默认关闭（默认使用rdb快照方式，建议使用aof方式）
+	
+	2.2、主从模式
+		启动方式如2.1，不过需要相关配置文件，我们使用默认配置为主节点，增加其他节点，如果从节点先启动，服务将会一直尝试连接主节点，主节点可以读写，从节点只读
+		本机多服务或多机部署放，参数
+			port：多机可以不修改
+			slaveof [ip] [port]：本节点是[ip]为[port]的从节点
+		
+	2.3、哨兵模式
+		哨兵模式是主从模式的升级版，他会在后台有一个监控，监控当前的主机，巡逻主机下面的从机，如果某一时刻主机挂掉了，那么他会通过一种投票的机制从从机之中选举一台作为新的主机，并且，其余的从机将会连接到这个新的主机上面。
+		哨兵参数：
+			port 26379 // 当前Sentinel服务运行的端口  
+			sentinel monitor mymaster 127.0.0.1 6379 2   // 去监视一个名为mymaster的主redis实例，这个主实例的IP地址为本机地址127.0.0.1，端口号为6379，而将这个主实例判断为失效至少需要2个 Sentinel进程的同意，只要同意Sentinel的数量不达标，自动failover就不会执行
+			sentinel down-after-milliseconds mymaster 5000  // 指定了Sentinel认为Redis实例已经失效所需的毫秒数。当 实例超过该时间没有返回PING，或者直接返回错误，那么Sentinel将这个实例标记为主观下线。只有一个 Sentinel进程将实例标记为主观下线并不一定会引起实例的自动故障迁移：只有在足够数量的Sentinel都将一个实例标记为主观下线之后，实例才会被标记为客观下线，这时自动故障迁移才会执行
+			sentinel parallel-syncs mymaster 1  // 指定了在执行故障转移时，最多可以有多少个从Redis实例在同步新的主实例，在从Redis实例较多的情况下这个数字越小，同步的时间越长，完成故障转移所需的时间就越长
+			sentinel failover-timeout mymaster 15000 // 如果在该时间（ms）内未能完成failover操作，则认为该failover失败
+		哨兵节点没有用户数据（哨兵服务需要单数个节点）
+3、部署完可用使用redis-cli查看部署情况
